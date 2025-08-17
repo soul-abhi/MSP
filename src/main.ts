@@ -8,8 +8,60 @@ interface YouTubeVideo {
   thumbnail: string;
 }
 
+// YouTube Player Types
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
 // Configuration
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+
+// YouTube Player
+let youtubePlayer: any = null;
+let isYouTubePlayerReady = false;
+
+// Initialize YouTube Player API
+(window as any).onYouTubeIframeAPIReady = () => {
+  console.log('🎵 YouTube IFrame API Ready');
+  youtubePlayer = new window.YT.Player('youtube-player', {
+    height: '0',
+    width: '0',
+    videoId: '', // Will be set when playing
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      disablekb: 1,
+      enablejsapi: 1,
+      modestbranding: 1,
+      playsinline: 1,
+      rel: 0,
+      showinfo: 0
+    },
+    events: {
+      onReady: () => {
+        console.log('✅ YouTube Player ready!');
+        isYouTubePlayerReady = true;
+      },
+      onStateChange: (event: any) => {
+        console.log('🎵 Player state changed:', event.data);
+        if (event.data === window.YT.PlayerState.PLAYING) {
+          isPlaying = true;
+          playPauseIcon.textContent = '⏸️';
+        } else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.ENDED) {
+          isPlaying = false;
+          playPauseIcon.textContent = '▶️';
+        }
+      },
+      onError: (error: any) => {
+        console.error('❌ YouTube Player error:', error);
+        showNotification('❌ Playback error. This video might not be playable.');
+      }
+    }
+  });
+};
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput') as HTMLInputElement;
@@ -93,7 +145,7 @@ async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
   }
 }
 
-// Play Audio Function - Complete Rewrite with Working Solutions
+// Play Audio Function - Using YouTube Player API
 async function playAudio(video: YouTubeVideo) {
   console.log('🎵 Starting playback for:', video.title, 'ID:', video.id);
   showNotification(`Loading: ${video.title}`);
@@ -107,18 +159,38 @@ async function playAudio(video: YouTubeVideo) {
   playerSection.classList.remove('hidden');
 
   try {
-    console.log('🔍 Starting CORS-free audio extraction...');
+    // Wait for YouTube player to be ready
+    if (!isYouTubePlayerReady || !youtubePlayer) {
+      console.log('⏳ Waiting for YouTube player to initialize...');
+      showNotification('⏳ Initializing player...');
+      
+      // Wait up to 5 seconds for player to be ready
+      let waitTime = 0;
+      while (!isYouTubePlayerReady && waitTime < 5000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitTime += 100;
+      }
+      
+      if (!isYouTubePlayerReady) {
+        throw new Error('YouTube player failed to initialize');
+      }
+    }
+
+    console.log('🎵 Loading video into YouTube player...');
     
-    // Method 1: Create hidden iframe for background playback (WORKING SOLUTION)
-    console.log('🎵 Creating background audio player...');
-    await createBackgroundYouTubePlayer(video);
+    // Load the video into the YouTube player
+    youtubePlayer.loadVideoById({
+      videoId: video.id,
+      startSeconds: 0
+    });
+
+    // Wait a moment for video to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    console.log('▶️ Starting playback...');
     
-    // Method 2: Use YouTube's own audio format with iframe API
-    const audioUrl = `https://www.youtube.com/embed/${video.id}?enablejsapi=1&autoplay=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${video.id}`;
-    console.log('🎵 Using YouTube embed audio URL:', audioUrl);
-    
-    // Create a proper audio interface
-    await setupAudioInterface();
+    // Play the video (requires user interaction)
+    youtubePlayer.playVideo();
     
     isPlaying = true;
     playPauseIcon.textContent = '⏸️';
@@ -127,163 +199,31 @@ async function playAudio(video: YouTubeVideo) {
 
   } catch (error) {
     console.error('❌ Playback error:', error);
-    showNotification(`Error playing "${video.title}"`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    showNotification(`❌ Error playing "${video.title}": ${errorMessage}`);
     playPauseIcon.textContent = '▶️';
   }
 }
 
-// Create background YouTube player that actually plays audio
-async function createBackgroundYouTubePlayer(video: YouTubeVideo): Promise<void> {
-  console.log('🎵 Setting up background YouTube player...');
-  
-  // Remove any existing background player
-  const existingPlayer = document.getElementById('background-youtube-player');
-  if (existingPlayer) {
-    existingPlayer.remove();
-  }
-  
-  // Create hidden iframe that will play the audio
-  const iframe = document.createElement('iframe');
-  iframe.id = 'background-youtube-player';
-  iframe.src = `https://www.youtube.com/embed/${video.id}?autoplay=1&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`;
-  iframe.style.cssText = `
-    position: fixed;
-    left: -9999px;
-    top: -9999px;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-    z-index: -1;
-  `;
-  iframe.allow = 'autoplay; encrypted-media';
-  
-  document.body.appendChild(iframe);
-  
-  // Wait for iframe to load
-  return new Promise((resolve) => {
-    iframe.onload = () => {
-      console.log('✅ Background YouTube player loaded');
-      resolve();
-    };
-    
-    // Fallback timeout
-    setTimeout(() => {
-      console.log('✅ Background player timeout - assuming loaded');
-      resolve();
-    }, 3000);
-  });
-}
-
-// Setup audio interface with working controls
-async function setupAudioInterface(): Promise<void> {
-  console.log('🎵 Setting up audio interface...');
-  
-  // Create a custom audio controller since we can't directly control iframe
-  const audioController = {
-    isPlaying: true,
-    
-    play: () => {
-      console.log('▶️ Play triggered');
-      // Send play message to iframe if possible
-      const iframe = document.getElementById('background-youtube-player') as HTMLIFrameElement;
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-        } catch (e) {
-          console.log('🔄 Iframe communication limited, using fallback');
-        }
-      }
-      audioController.isPlaying = true;
-      playPauseIcon.textContent = '⏸️';
-    },
-    
-    pause: () => {
-      console.log('⏸️ Pause triggered');
-      const iframe = document.getElementById('background-youtube-player') as HTMLIFrameElement;
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-        } catch (e) {
-          console.log('🔄 Iframe communication limited, using fallback');
-        }
-      }
-      audioController.isPlaying = false;
-      playPauseIcon.textContent = '▶️';
-    }
-  };
-  
-  // Store reference for play/pause functionality
-  (window as any).currentAudioController = audioController;
-  
-  console.log('✅ Audio interface ready');
-}
-
-// Player Controls - Updated for background YouTube player
+// Player Controls - Updated for YouTube Player API
 function togglePlayPause() {
-  const controller = (window as any).audioController;
-  const backgroundPlayer = document.getElementById('background-youtube-player');
-  
-  if (backgroundPlayer || controller) {
-    if (isPlaying) {
-      console.log('🎵 Pausing background player');
-      if (controller) {
-        controller.pause();
+  if (youtubePlayer && isYouTubePlayerReady) {
+    try {
+      if (isPlaying) {
+        console.log('⏸️ Pausing YouTube player');
+        youtubePlayer.pauseVideo();
       } else {
-        // Fallback to legacy audio player
-        audioPlayer.pause();
+        console.log('▶️ Playing YouTube player');
+        youtubePlayer.playVideo();
       }
-    } else {
-      console.log('🎵 Playing background player');
-      if (controller) {
-        controller.play();
-      } else {
-        // Fallback to legacy audio player
-        audioPlayer.play();
-      }
+    } catch (error) {
+      console.error('❌ Error controlling YouTube player:', error);
+      showNotification('❌ Player control error');
     }
   } else {
     showNotification('⚠️ No music loaded. Please search and select a song first.');
   }
 }
-
-// Audio Events - Updated for background player system
-const audioController = {
-  isPlaying: false,
-  
-  play: () => {
-    console.log('▶️ Play triggered');
-    const iframe = document.getElementById('background-youtube-player') as HTMLIFrameElement;
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-      } catch (e) {
-        console.log('🔄 Iframe communication limited');
-      }
-    }
-    audioController.isPlaying = true;
-    playPauseIcon.textContent = '⏸️';
-    isPlaying = true;
-  },
-  
-  pause: () => {
-    console.log('⏸️ Pause triggered');
-    const iframe = document.getElementById('background-youtube-player') as HTMLIFrameElement;
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-      } catch (e) {
-        console.log('🔄 Iframe communication limited');
-      }
-    }
-    audioController.isPlaying = false;
-    playPauseIcon.textContent = '▶️';
-    isPlaying = false;
-  }
-};
-
-// Store global reference
-(window as any).audioController = audioController;
 
 // Legacy audio player events (kept for compatibility)
 audioPlayer.onplay = () => {

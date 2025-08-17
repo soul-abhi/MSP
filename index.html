@@ -15,6 +15,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Music Player" />
 
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
     <title>Music Player</title>
   </head>
   <body
@@ -164,6 +167,9 @@
 
     <!-- Hidden Audio Element -->
     <audio id="audioPlayer" preload="metadata"></audio>
+
+    <!-- Hidden YouTube Player -->
+    <div id="youtube-player" style="display: none;"></div>
 
     <!-- Install PWA Button -->
     <button id="installBtn"
