@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/music-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1976d2" />
+    <meta name="description"
+      content="A modern music player with YouTube integration" />
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Music Player" />
+
+    <title>Music Player</title>
+  </head>
+  <body
+    class="h-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 text-gray-900">
+    <div id="app" class="min-h-full">
+      <div class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-8 animate-fade-in">
+          <h1
+            class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-500 flex items-center justify-center gap-3">
+            <span class="text-5xl md:text-6xl animate-bounce-slow">🎵</span>
+            Music Player
+          </h1>
+          <p class="text-gray-600 mt-2 text-lg">Discover and play your favorite
+            music</p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="mb-8 animate-slide-up">
+          <div class="relative max-w-2xl mx-auto">
+            <div
+              class="flex gap-3 p-2 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+              <input
+                type="text"
+                id="searchInput"
+                class="flex-1 px-4 py-3 text-lg bg-transparent border-none outline-none placeholder-gray-400 text-gray-800"
+                placeholder="Search for music on YouTube..."
+                autocomplete="off" />
+              <button id="searchBtn"
+                class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:from-primary-600 hover:to-primary-700 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl">
+                <span class="text-xl">🔍</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden text-center py-12 animate-fade-in">
+          <div
+            class="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
+          <p class="mt-4 text-gray-600 text-lg font-medium">Searching for
+            music...</p>
+        </div>
+
+        <!-- Search Results -->
+        <section class="mb-8">
+          <div id="searchResults" class="grid gap-4"></div>
+        </section>
+
+        <!-- Instructions Section -->
+        <section
+          class="mb-8 bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 border border-blue-100">
+          <div class="text-center">
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">🎵 How to Play
+              Music</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">
+              Click "Play Now" on any search result to play a demo audio.
+              This demonstrates the music player functionality - real YouTube
+              audio extraction would require additional backend services.
+            </p>
+            <div class="mt-3 flex justify-center gap-2 text-xs text-gray-500">
+              <span class="bg-white px-2 py-1 rounded-full">🎵 Demo Audio</span>
+              <span class="bg-white px-2 py-1 rounded-full">🔧 Player
+                Controls</span>
+              <span class="bg-white px-2 py-1 rounded-full">📱 In-App
+                Playback</span>
+              <span class="bg-white px-2 py-1 rounded-full">🎵 High
+                Quality</span>
+              <span class="bg-white px-2 py-1 rounded-full">🚀 Fast
+                Playback</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Current Track Display -->
+        <section class="hidden mb-8 animate-slide-up" id="currentTrack">
+          <div
+            class="bg-white rounded-3xl p-6 shadow-xl border border-gray-100">
+            <div class="flex flex-col md:flex-row items-center gap-6">
+              <img id="trackThumbnail"
+                class="w-32 h-24 md:w-40 md:h-30 rounded-2xl object-cover shadow-lg"
+                alt="Track thumbnail" />
+              <div class="text-center md:text-left flex-1 min-w-0">
+                <h3 id="trackTitle"
+                  class="text-2xl md:text-3xl font-bold text-gray-800 mb-2 truncate"></h3>
+                <p id="trackChannel" class="text-lg text-gray-600"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Audio Player Controls -->
+        <section class="hidden mb-8 animate-scale-in" id="playerSection">
+          <div
+            class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100">
+            <!-- Player Controls -->
+            <div class="flex justify-center items-center gap-6 mb-8">
+              <button id="playPauseBtn"
+                class="w-20 h-20 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full flex items-center justify-center text-4xl transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg">
+                <span id="playPauseIcon">▶️</span>
+              </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="flex items-center gap-4 mb-6">
+              <span id="currentTime"
+                class="text-sm text-gray-500 font-mono min-w-[40px]">0:00</span>
+              <div
+                class="flex-1 h-3 bg-gray-200 rounded-full cursor-pointer overflow-hidden group">
+                <div id="progressBar" class="w-full h-full relative">
+                  <div id="progressFill"
+                    class="h-full bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full transition-all duration-100 relative">
+                    <div
+                      class="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </div>
+                </div>
+              </div>
+              <span id="duration"
+                class="text-sm text-gray-500 font-mono min-w-[40px]">0:00</span>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="flex items-center justify-center gap-3">
+              <span class="text-xl">🔊</span>
+              <input type="range" id="volumeSlider"
+                class="w-24 md:w-32 h-2 bg-gray-200 rounded-lg cursor-pointer slider"
+                min="0" max="100" value="50" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Instructions -->
+        <section class="animate-slide-up">
+          <div
+            class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-3xl p-6 shadow-lg border border-blue-100">
+            <div class="text-center">
+              <h3 class="text-xl font-bold text-gray-800 mb-2">🎵 How to Play
+                Music</h3>
+              <p class="text-gray-600">Search for any song above and click <span
+                  class="inline-flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded text-sm"><span>▶️</span>
+                  Play Now</span> to start listening!</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Hidden Audio Element -->
+    <audio id="audioPlayer" preload="metadata"></audio>
+
+    <!-- Install PWA Button -->
+    <button id="installBtn"
+      class="hidden fixed bottom-6 right-6 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-6 py-3 rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 z-50">
+      <span class="flex items-center gap-2">
+        📱 Install App
+      </span>
+    </button>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
